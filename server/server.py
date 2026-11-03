@@ -113,6 +113,15 @@ async def host_handler(websocket: ServerConnection, device_id: str, pin: str):
     session.last_active = time.time()
     print(f"[HOST CONNECTED] Windows Host '{device_id}' connected successfully.")
 
+    # Tell host whether any clients are currently watching
+    try:
+        await websocket.send(json.dumps({
+            "type": "client_count",
+            "count": len(session.clients)
+        }))
+    except Exception:
+        pass
+
     # Notify any already connected Mac clients that host is online
     for client in list(session.clients):
         try:
@@ -177,6 +186,16 @@ async def client_handler(websocket: ServerConnection, device_id: str, pin: str):
     session.clients.add(websocket)
     print(f"[CLIENT CONNECTED] Mac Client connected for device '{device_id}'. Active viewers: {len(session.clients)}")
 
+    # Notify host that a viewer joined
+    if session.host_ws is not None:
+        try:
+            await session.host_ws.send(json.dumps({
+                "type": "client_count",
+                "count": len(session.clients)
+            }))
+        except Exception:
+            pass
+
     # Send current host status
     is_online = session.host_ws is not None
     await websocket.send(json.dumps({
@@ -201,6 +220,14 @@ async def client_handler(websocket: ServerConnection, device_id: str, pin: str):
     finally:
         session.clients.discard(websocket)
         print(f"[CLIENT DISCONNECTED] Mac Client disconnected. Remaining viewers: {len(session.clients)}")
+        if session.host_ws is not None:
+            try:
+                await session.host_ws.send(json.dumps({
+                    "type": "client_count",
+                    "count": len(session.clients)
+                }))
+            except Exception:
+                pass
 
 
 async def ws_router(websocket: ServerConnection):
@@ -236,8 +263,8 @@ async def main():
         HOST,
         PORT,
         process_request=http_handler,
-        ping_interval=15,
-        ping_timeout=30,
+        ping_interval=20,
+        ping_timeout=60,
         max_size=10 * 1024 * 1024,  # 10 MB max frame size
     ):
         await asyncio.get_running_loop().create_future()

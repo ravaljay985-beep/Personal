@@ -52,10 +52,10 @@ PIN = os.environ.get("REMOTEDESK_PIN", "123456")
 
 # Dynamic Stream Settings
 stream_config = {
-    "quality": 55,       # JPEG quality (1-100)
-    "target_fps": 25,     # Target frames per second
-    "scale": 0.85,       # Downscale factor (1.0 = native, 0.75 = 75% resolution)
-    "has_client": False  # Only stream frames when a client is connected
+    "quality": 42,       # Balanced quality (saves ~60% bandwidth, stops disconnects)
+    "target_fps": 18,     # 18 FPS is ideal for remote desktop without overflowing network buffers
+    "scale": 0.70,       # 70% scale delivers smooth performance on free cloud relays
+    "has_client": False  # Only stream frames when a viewer is actively connected
 }
 
 # Key mapping from browser JavaScript key names to PyAutoGUI key names
@@ -173,6 +173,15 @@ def handle_input_event(data: dict, screen_width: int, screen_height: int):
             elif shortcut == "esc":
                 pyautogui.press("esc")
 
+        elif evt_type == "hide_cursor":
+            hidden = data.get("hidden", True)
+            if sys.platform == "win32":
+                try:
+                    import ctypes
+                    ctypes.windll.user32.ShowCursor(not hidden)
+                except Exception as ce:
+                    print(f"[CURSOR ERROR] {ce}")
+
         elif evt_type == "config":
             # Adapt streaming parameters dynamically from client
             q_mode = data.get("quality")
@@ -204,6 +213,10 @@ async def receive_loop(ws, screen_w, screen_h):
                 msg_type = data.get("type")
                 if msg_type == "ping":
                     await ws.send(json.dumps({"type": "pong"}))
+                elif msg_type == "client_count":
+                    count = data.get("count", 0)
+                    stream_config["has_client"] = count > 0
+                    print(f"[CLIENTS] Active viewers: {count} - {'Streaming desktop' if count > 0 else 'Paused (0% CPU)'}")
                 else:
                     handle_input_event(data, screen_w, screen_h)
             except Exception as e:
@@ -216,6 +229,11 @@ async def stream_screen_loop(ws, screen_w, screen_h):
 
     try:
         while True:
+            # When nobody is watching, sleep to save CPU and network bandwidth
+            if not stream_config["has_client"]:
+                await asyncio.sleep(0.3)
+                continue
+
             t_start = time.perf_counter()
 
             # Capture frame
@@ -225,7 +243,7 @@ async def stream_screen_loop(ws, screen_w, screen_h):
             # Frame rate pacing
             target_dt = 1.0 / stream_config["target_fps"]
             elapsed = time.perf_counter() - t_start
-            sleep_time = max(0.005, target_dt - elapsed)
+            sleep_time = max(0.015, target_dt - elapsed)
             await asyncio.sleep(sleep_time)
     finally:
         if sct:

@@ -339,6 +339,16 @@ function sendShortcut(shortcutType) {
   }));
 }
 
+let cursorHidden = false;
+const btnToggleCursor = document.getElementById("btnToggleCursor");
+if (btnToggleCursor) {
+  btnToggleCursor.addEventListener("click", () => {
+    cursorHidden = !cursorHidden;
+    canvas.style.cursor = cursorHidden ? "none" : "crosshair";
+    btnToggleCursor.textContent = cursorHidden ? "👁️ Show Arrow" : "👁️ Hide Arrow";
+  });
+}
+
 document.getElementById("btnWinKey").addEventListener("click", () => sendShortcut("win"));
 document.getElementById("btnAltTab").addEventListener("click", () => sendShortcut("alt_tab"));
 document.getElementById("btnEsc").addEventListener("click", () => sendShortcut("esc"));
