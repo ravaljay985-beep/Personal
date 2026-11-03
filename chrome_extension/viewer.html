@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RemoteDesk - Unattended Remote Control</title>
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-icon">💻</div>
+      <div class="title-wrap">
+        <span class="app-title">RemoteDesk</span>
+        <span class="device-name" id="displayDeviceId">windows-laptop</span>
+      </div>
+    </div>
+
+    <div class="stats-group">
+      <span class="badge" id="statusBadge">
+        <span class="dot"></span>
+        <span id="statusText">Connecting...</span>
+      </span>
+      <span class="stat-pill" title="Round-trip latency">📶 <span id="pingVal">--</span> ms</span>
+      <span class="stat-pill" title="Frames per second">🎬 <span id="fpsVal">0</span> FPS</span>
+    </div>
+
+    <div class="controls-group">
+      <!-- Quality Selector -->
+      <select id="qualitySelect" title="Stream Quality">
+        <option value="low">Speed (Low Quality)</option>
+        <option value="medium" selected>Balanced (Medium)</option>
+        <option value="high">Clarity (High Quality)</option>
+      </select>
+
+      <!-- FPS Selector -->
+      <select id="fpsSelect" title="Target FPS">
+        <option value="15">15 FPS</option>
+        <option value="25" selected>25 FPS</option>
+        <option value="35">35 FPS</option>
+      </select>
+
+      <!-- Action Buttons -->
+      <div class="quick-keys">
+        <button class="btn btn-secondary" id="btnWinKey" title="Send Windows Key">⊞ Win</button>
+        <button class="btn btn-secondary" id="btnAltTab" title="Send Alt+Tab">Alt+Tab</button>
+        <button class="btn btn-secondary" id="btnEsc" title="Send Escape">Esc</button>
+      </div>
+
+      <button class="btn btn-primary" id="btnFullscreen" title="Toggle Fullscreen">⛶ Fullscreen</button>
+      <button class="btn btn-icon" id="btnSettings" title="Connection Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Screen Canvas Container -->
+  <main class="viewer-container" id="viewerContainer">
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <canvas id="screenCanvas" width="1920" height="1080" tabindex="0"></canvas>
+    </div>
+
+    <!-- Offline / Waiting Overlay -->
+    <div class="overlay" id="offlineOverlay">
+      <div class="overlay-card">
+        <div class="spinner" id="overlaySpinner"></div>
+        <h2 id="overlayTitle">Waiting for Windows Laptop...</h2>
+        <p id="overlayMessage">Make sure the RemoteDesk Agent is running on the remote Windows machine.</p>
+        <div class="device-tag">Device: <b id="overlayDeviceId">windows-laptop</b></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal">
+      <h3>Connection Settings</h3>
+      <p class="modal-desc">Configure your remote device connection credentials.</p>
+      
+      <div class="form-group">
+        <label for="inputRelayUrl">Relay Server URL</label>
+        <input type="text" id="inputRelayUrl" placeholder="auto (current server)">
+        <small>Leave empty to use the current host, or enter e.g. <code>wss://your-relay.com</code></small>
+      </div>
+
+      <div class="form-group">
+        <label for="inputDeviceId">Device ID</label>
+        <input type="text" id="inputDeviceId" value="windows-laptop" placeholder="e.g. my-laptop">
+      </div>
+
+      <div class="form-group">
+        <label for="inputPin">Secret PIN / Password</label>
+        <input type="password" id="inputPin" value="123456" placeholder="Enter PIN">
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="btnCloseSettings">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveSettings">Save & Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="viewer.js"></script>
+</body>
+</html>
