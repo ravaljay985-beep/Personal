@@ -17,6 +17,7 @@ import time
 from typing import Dict, Optional, Set
 import websockets
 from websockets.asyncio.server import ServerConnection, serve
+from websockets.datastructures import Headers
 from websockets.http11 import Response
 
 # Default Configuration (can be overridden via environment variables)
@@ -46,6 +47,16 @@ def get_or_create_device(device_id: str) -> DeviceSession:
     return DEVICES[device_id]
 
 
+def make_http_response(status_code: int, reason: str, content_type: str, body_bytes: bytes) -> Response:
+    headers = Headers([
+        ("Content-Type", content_type),
+        ("Content-Length", str(len(body_bytes))),
+        ("Cache-Control", "no-cache"),
+        ("Access-Control-Allow-Origin", "*"),
+    ])
+    return Response(status_code, reason, headers, body_bytes)
+
+
 def serve_static_file(connection: ServerConnection, path: str) -> Optional[Response]:
     """Serves static files (HTML, JS, CSS, icons) for the Web Client."""
     clean_path = path.split("?")[0].lstrip("/")
@@ -55,10 +66,10 @@ def serve_static_file(connection: ServerConnection, path: str) -> Optional[Respo
     file_path = os.path.normpath(os.path.join(STATIC_DIR, clean_path))
     # Security: prevent path traversal outside static folder
     if not file_path.startswith(STATIC_DIR):
-        return connection.respond(403, "Forbidden", [("Content-Type", "text/plain")], b"Access Denied")
+        return make_http_response(403, "Forbidden", "text/plain; charset=utf-8", b"Access Denied")
 
     if not os.path.isfile(file_path):
-        return connection.respond(404, "Not Found", [("Content-Type", "text/plain")], b"404 Not Found")
+        return make_http_response(404, "Not Found", "text/plain; charset=utf-8", b"404 Not Found")
 
     mime_type, _ = mimetypes.guess_type(file_path)
     if not mime_type:
@@ -69,18 +80,9 @@ def serve_static_file(connection: ServerConnection, path: str) -> Optional[Respo
     try:
         with open(file_path, "rb") as f:
             content = f.read()
-        return connection.respond(
-            200,
-            "OK",
-            [
-                ("Content-Type", mime_type),
-                ("Content-Length", str(len(content))),
-                ("Cache-Control", "no-cache"),
-            ],
-            content,
-        )
+        return make_http_response(200, "OK", mime_type, content)
     except Exception as e:
-        return connection.respond(500, "Internal Server Error", [("Content-Type", "text/plain")], str(e).encode())
+        return make_http_response(500, "Internal Server Error", "text/plain; charset=utf-8", str(e).encode())
 
 
 def http_handler(connection: ServerConnection, request) -> Optional[Response]:
